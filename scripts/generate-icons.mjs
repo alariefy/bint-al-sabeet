@@ -178,6 +178,52 @@ const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"
 </svg>
 `;
 
+/**
+ * Link-preview artwork. Shown when the URL is shared in WhatsApp, Telegram or
+ * similar. Wordless on purpose: rendering Arabic type here would need a font
+ * rasteriser, and the title comes from the Open Graph tags instead.
+ */
+function drawShareCover(width, height) {
+  const samples = 3;
+  const rgba = Buffer.alloc(width * height * 4);
+  const cx = width / 2;
+  const cy = height / 2;
+  const discR = height * 0.32;
+  const ringInner = discR - height * 0.014;
+  const spadeSize = height * 0.3;
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      for (let sy = 0; sy < samples; sy += 1) {
+        for (let sx = 0; sx < samples; sx += 1) {
+          const px = x + (sx + 0.5) / samples;
+          const py = y + (sy + 0.5) / samples;
+          let colour = BASE;
+          const dist = Math.hypot(px - cx, py - cy);
+          if (dist <= discR) colour = SURFACE;
+          if (dist <= discR && dist >= ringInner) colour = LINE;
+          if (insideSpade((px - cx) / spadeSize, (py - cy) / spadeSize)) colour = GOLD;
+          /* A thin gold rule along the bottom edge. */
+          if (py >= height - height * 0.018) colour = GOLD;
+          r += colour[0];
+          g += colour[1];
+          b += colour[2];
+        }
+      }
+      const total = samples * samples;
+      const index = (y * width + x) * 4;
+      rgba[index] = Math.round(r / total);
+      rgba[index + 1] = Math.round(g / total);
+      rgba[index + 2] = Math.round(b / total);
+      rgba[index + 3] = 255;
+    }
+  }
+  return encodePng(width, height, rgba);
+}
+
 mkdirSync(iconsDir, { recursive: true });
 
 writeFileSync(
@@ -197,5 +243,6 @@ writeFileSync(
   drawIcon(180, { fullBleed: true, contentScale: 0.3, opaque: true }),
 );
 writeFileSync(resolve(publicDir, 'favicon.svg'), FAVICON_SVG);
+writeFileSync(resolve(publicDir, 'share-cover.png'), drawShareCover(1200, 630));
 
 console.log('icons written to public/');

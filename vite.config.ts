@@ -42,6 +42,9 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        /* Link-preview art is only ever fetched by social scrapers, so it
+           should not weigh down the offline install. */
+        globIgnores: ['**/share-cover.png'],
         cleanupOutdatedCaches: true,
         navigateFallback: 'index.html',
       },

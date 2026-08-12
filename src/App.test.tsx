@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { UserEvent } from '@testing-library/user-event';
 import { App } from './App';
@@ -481,6 +481,39 @@ describe('history', () => {
 
     expect(screen.getByText('لا توجد ألعاب منتهية بعد.')).toBeInTheDocument();
     expect(loadState().finishedGames).toHaveLength(0);
+  });
+});
+
+describe('installing the app', () => {
+  it('offers a one-tap install button once the browser says the app qualifies', async () => {
+    const user = setup();
+    expect(screen.queryByRole('button', { name: 'تثبيت التطبيق الآن' })).not.toBeInTheDocument();
+
+    const event = new Event('beforeinstallprompt') as Event & {
+      prompt: () => Promise<void>;
+      userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+    };
+    let prompted = false;
+    event.prompt = () => {
+      prompted = true;
+      return Promise.resolve();
+    };
+    event.userChoice = Promise.resolve({ outcome: 'accepted' as const });
+    await act(async () => {
+      window.dispatchEvent(event);
+    });
+
+    const button = screen.getByRole('button', { name: 'تثبيت التطبيق الآن' });
+    await user.click(button);
+
+    expect(prompted).toBe(true);
+    expect(await screen.findByText('تم تثبيت التطبيق على الشاشة الرئيسية')).toBeInTheDocument();
+  });
+
+  it('falls back to written instructions when the browser never offers a prompt', () => {
+    setup();
+    expect(screen.queryByRole('button', { name: 'تثبيت التطبيق الآن' })).not.toBeInTheDocument();
+    expect(screen.getByText(/إضافة إلى الشاشة الرئيسية/)).toBeInTheDocument();
   });
 });
 

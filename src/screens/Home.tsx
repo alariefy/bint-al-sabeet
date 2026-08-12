@@ -3,11 +3,13 @@ import { Button } from '../components/Button';
 import { Card, SectionTitle } from '../components/Screen';
 import { STRINGS } from '../lib/strings';
 import { shareAppLink } from '../lib/share';
+import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import type { GameApi } from '../hooks/useGame';
 
 export function Home({ api }: { api: GameApi }) {
   const { activeGame, status, setRoute, notify } = api;
   const [shareFallback, setShareFallback] = useState<string | null>(null);
+  const { canInstall, installed, install } = useInstallPrompt();
 
   const nextRoundNumber = activeGame ? activeGame.rounds.length + 1 : 1;
 
@@ -64,7 +66,32 @@ export function Home({ api }: { api: GameApi }) {
 
         <Card className="mt-2">
           <SectionTitle>{STRINGS.installTitle}</SectionTitle>
-          <p className="text-sm leading-relaxed text-ink-dim">{STRINGS.installHint}</p>
+          {installed ? (
+            <p className="text-sm text-good">{STRINGS.installedBadge}</p>
+          ) : canInstall ? (
+            <Button
+              variant="primary"
+              block
+              onClick={() => {
+                void install().then((outcome) => {
+                  if (outcome === 'accepted') notify(STRINGS.installDone, 'success');
+                  else if (outcome === 'dismissed') notify(STRINGS.installDismissed, 'info');
+                });
+              }}
+            >
+              {STRINGS.installNow}
+            </Button>
+          ) : null}
+          <p
+            className={[
+              'text-sm leading-relaxed text-ink-dim',
+              installed ? 'mt-2' : canInstall ? 'mt-3' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
+            {STRINGS.installHint}
+          </p>
           <p className="mt-2 text-sm text-good">{STRINGS.offlineReady}</p>
           <Button
             variant="ghost"
